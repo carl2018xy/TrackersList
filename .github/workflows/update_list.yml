@@ -1,0 +1,48 @@
+name: Update Tracker List
+
+on:
+  schedule:
+    # 每天UTC时间0点执行一次 (例如北京时间早上8点)
+    # 你可以调整这个时间，格式是：分钟 小时 日 月 星期
+    # '0 0 * * *' 表示每天的 00:00 UTC
+    # '0 16 * * *' 表示每天的 16:00 UTC (对应北京时间第二天00:00)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  update-list:
+    runs-on: ubuntu-latest # 使用最新的Ubuntu运行环境
+    steps:
+      - name: Checkout repository
+        # 这个步骤会下载你的仓库代码到运行环境中
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        # 设置Python环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # 你可以指定Python版本，3.x 或具体版本如3.10
+
+      - name: Install dependencies
+        # 安装Python脚本需要的库 (这里是requests)
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run script to update tracker list
+        # 运行你的Python脚本
+        run: python update_trackers.py # 确保这个脚本在仓库根目录
+
+      - name: Commit and push if changes
+        # 如果 track_combined.txt 文件有变化，则提交并推送到仓库
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add trackers_combined.txt # 确保这个文件名和Python脚本中输出的文件名一致
+          # 只在有改动时才commit和push
+          if ! git diff --cached --quiet; then
+            git commit -m "Update combined tracker list (Automated)"
+            git push
+          else
+            echo "No changes to commit."
+          fi
